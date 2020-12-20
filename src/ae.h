@@ -48,7 +48,7 @@
                            to do that in a group fashion. */
 
 #define AE_FILE_EVENTS 1
-#define AE_TIME_EVENTS 2
+#define AE_TIME_EVENTS 2  /* 定时器事件 */
 #define AE_ALL_EVENTS (AE_FILE_EVENTS|AE_TIME_EVENTS)
 #define AE_DONT_WAIT 4
 #define AE_CALL_AFTER_SLEEP 8

@@ -182,6 +182,10 @@ int aeGetFileEvents(aeEventLoop *eventLoop, int fd) {
     return fe->mask;
 }
 
+/*
+ * Get the current time of day and timezone information
+ *
+ * */
 static void aeGetTime(long *seconds, long *milliseconds)
 {
     struct timeval tv;
@@ -205,20 +209,49 @@ static void aeAddMillisecondsToNow(long long milliseconds, long *sec, long *ms) 
     *ms = when_ms;
 }
 
+/*
+ * 创建定时器:
+ *  创建 aeTimeEvent && 插入到 eventLoop->timeEventHead 链表中
+ *
+ * 定时器链表是一个无序链表, 总是把最新节点插入链表头部
+ *
+ * */
 long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc)
 {
     long long id = eventLoop->timeEventNextId++;
+    /*
+     *
+     * aeTimeEvent:  一个双向节点
+	struct aeTimeEvent *prev;
+	struct aeTimeEvent *next;
+     *
+     * */
     aeTimeEvent *te;
-
+    
+    /*
+     *
+     * 创建定时器节点
+     *
+     * */
     te = zmalloc(sizeof(*te));
     if (te == NULL) return AE_ERR;
     te->id = id;
+    /*
+     * 将设置的 x 秒后触发, 加上当前时间, 设置给 aeTimeEvent, 方便之后的比较
+     *
+     * */
     aeAddMillisecondsToNow(milliseconds,&te->when_sec,&te->when_ms);
     te->timeProc = proc;
     te->finalizerProc = finalizerProc;
     te->clientData = clientData;
+    
+    /*
+     *
+     * 插入链表, 插入方式：pushLeft
+     *
+     * */
     te->prev = NULL;
     te->next = eventLoop->timeEventHead;
     if (te->next)
@@ -360,6 +393,11 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
     int processed = 0, numevents;
 
     /* Nothing to do? return ASAP */
+    
+    /*
+     * 如果没有需要处理的事件，直接返回
+     *
+     * */
     if (!(flags & AE_TIME_EVENTS) && !(flags & AE_FILE_EVENTS)) return 0;
 
     /* Note that we want call select() even if there are no
@@ -371,7 +409,11 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
         int j;
         aeTimeEvent *shortest = NULL;
         struct timeval tv, *tvp;
-
+	
+	/*
+	 * 如果有定时器事件发生 && 不必等待, 寻找最近定时器
+	 * 
+	 * */
         if (flags & AE_TIME_EVENTS && !(flags & AE_DONT_WAIT))
             shortest = aeSearchNearestTimer(eventLoop);
         if (shortest) {

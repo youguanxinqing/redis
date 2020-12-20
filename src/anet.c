@@ -537,15 +537,16 @@ end:
 }
 
 
-/* 
- * port 服务器监听的端口 (默认情况下传入6379)
- *
- * */
 int anetTcpServer(char *err, int port, char *bindaddr, int backlog)
 {
     return _anetTcpServer(err, port, bindaddr, AF_INET, backlog);
 }
 
+/* 
+ * server 主线程监听时调用
+ * port 服务器监听的端口 (默认情况下传入6379) 
+ *
+ * */
 int anetTcp6Server(char *err, int port, char *bindaddr, int backlog)
 {
     return _anetTcpServer(err, port, bindaddr, AF_INET6, backlog);
@@ -569,6 +570,10 @@ int anetUnixServer(char *err, char *path, mode_t perm, int backlog)
     return s;
 }
 
+/*
+ * 监听 client 请求
+ *
+ * */
 static int anetGenericAccept(char *err, int s, struct sockaddr *sa, socklen_t *len) {
     int fd;
     while(1) {
