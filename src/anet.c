@@ -239,6 +239,11 @@ static int anetSetReuseAddr(char *err, int fd) {
     int yes = 1;
     /* Make sure connection-intensive things like the redis benckmark
      * will be able to close/open sockets a zillion of times */
+    
+    /*
+     * SO_REUSEADDR 地址复用, 确保 socket 在 TIME_WAIT 状态下可被复用
+     *
+     * */
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
         anetSetError(err, "setsockopt SO_REUSEADDR: %s", strerror(errno));
         return ANET_ERR;
@@ -466,6 +471,21 @@ static int _anetTcpServer(char *err, int port, char *bindaddr, int af, int backl
 {
     int s = -1, rv;
     char _port[6];  /* strlen("65535") */
+    /*
+     * 
+     *
+	truct addrinfo {
+	    int ai_flags;
+	    int ai_family;
+	    int ai_socktype;
+	    int ai_protocol;
+	    socklen_t ai_addrlen;
+	    struct sockaddr *ai_addr;
+	    char *ai_canonname;
+	    struct addrinfo *ai_next;
+	} *
+     *
+     * */
     struct addrinfo hints, *servinfo, *p;
 
     snprintf(_port,6,"%d",port);
@@ -473,17 +493,33 @@ static int _anetTcpServer(char *err, int port, char *bindaddr, int af, int backl
     hints.ai_family = af;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;    /* No effect if bindaddr != NULL */
-
+    
+	/*
+	 * getaddrinfo 获取主机的 IP 地址和端口信息
+	 *
+	 * */
     if ((rv = getaddrinfo(bindaddr,_port,&hints,&servinfo)) != 0) {
         anetSetError(err, "%s", gai_strerror(rv));
         return ANET_ERR;
     }
     for (p = servinfo; p != NULL; p = p->ai_next) {
+	/*
+	 * 创建 socket
+	 *
+	 * */
         if ((s = socket(p->ai_family,p->ai_socktype,p->ai_protocol)) == -1)
             continue;
 
         if (af == AF_INET6 && anetV6Only(err,s) == ANET_ERR) goto error;
+	/*
+	 * 设置地址复用
+	 *
+	 * */
         if (anetSetReuseAddr(err,s) == ANET_ERR) goto error;
+	/*
+	 * 创建 bind && listen
+	 *
+	 * */
         if (anetListen(err,s,p->ai_addr,p->ai_addrlen,backlog) == ANET_ERR) s = ANET_ERR;
         goto end;
     }
@@ -500,6 +536,11 @@ end:
     return s;
 }
 
+
+/* 
+ * port 服务器监听的端口 (默认情况下传入6379)
+ *
+ * */
 int anetTcpServer(char *err, int port, char *bindaddr, int backlog)
 {
     return _anetTcpServer(err, port, bindaddr, AF_INET, backlog);
