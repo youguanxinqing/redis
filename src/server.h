@@ -591,6 +591,11 @@ typedef struct redisObject {
     int refcount;
     void *ptr;
 } robj;
+/*
+ * 其中，元信息 type、encoding、lru、refcount 共占 8 字节
+ * ptr 指向实际数据（或存放实际数据）, 占 8 字节
+ * 一个 redisObject 至少 16 字节
+ * */
 
 /* Macro used to initialize a Redis object allocated on the stack.
  * Note that this macro is taken near the structure definition to make sure

@@ -577,10 +577,15 @@ void zipEntry(unsigned char *p, zlentry *e) {
 /* Create a new empty ziplist. */
 unsigned char *ziplistNew(void) {
     unsigned int bytes = ZIPLIST_HEADER_SIZE+1;
-    unsigned char *zl = zmalloc(bytes);
+    // 申请 11 个字节
+    unsigned char *zl = zmalloc(bytes); 
+    // zlbytes 存放 ziplist 的长度, 占 4 个字节
     ZIPLIST_BYTES(zl) = intrev32ifbe(bytes);
+    // zltail_offset 存放 ziplist 结尾偏移量, 占 4 个字节
     ZIPLIST_TAIL_OFFSET(zl) = intrev32ifbe(ZIPLIST_HEADER_SIZE);
+    // zllength 存放 entry 元素个数, 占 2 个字节
     ZIPLIST_LENGTH(zl) = 0;
+    // zlend 表示一个 ziplist 结束
     zl[bytes-1] = ZIP_END;
     return zl;
 }
